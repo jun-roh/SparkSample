@@ -1,0 +1,85 @@
+plugins {
+    id 'org.springframework.boot' version '2.4.5'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+}
+
+group = 'com.test.spark'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring basic starter
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'commons-validator:commons-validator:1.6'
+    implementation 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    compile 'org.springframework.boot:spring-boot-devtools'
+
+    // Spring thymeleaf
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect'
+    //    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity5'
+
+    // Mysql
+    runtimeOnly 'mysql:mysql-connector-java'
+
+    // JPA Data
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    //Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Logging
+    //implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4:1.16'
+
+    // Spring Security
+    //    implementation 'org.springframework.boot:spring-boot-starter-security'
+    //    implementation 'org.springframework.security.oauth:spring-security-oauth2:2.3.7.RELEASE'
+
+    //    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '4.1.2'
+
+    // Jackson Json
+    implementation 'com.fasterxml.jackson.core:jackson-core'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+
+    // redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Spark
+    implementation("org.apache.spark:spark-core_2.12:3.1.1"){
+        exclude group: "org.apache.xbean", module:"xbean-asm6-shaded"
+        exclude group: "org.slf4j", module:"slf4j-log4j12"
+    }
+    implementation("org.apache.spark:spark-sql_2.12:3.1.1"){
+        exclude group: "org.slf4j", module:"slf4j-log4j12"
+        exclude group: "org.codehaus.janino", module:"janino"
+        exclude group: "org.codehaus.janino", module:"commons-compiler"
+    }
+
+    implementation("org.apache.spark:spark-streaming_2.12:3.1.1"){
+        exclude group: "org.slf4j", module:"slf4j-log4j12"
+    }
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+test {
+    useJUnitPlatform()
+}
