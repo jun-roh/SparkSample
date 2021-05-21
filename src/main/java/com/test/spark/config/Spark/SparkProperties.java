@@ -10,7 +10,8 @@ import java.util.Properties;
 @Setter
 @ConfigurationProperties("spark")
 public class SparkProperties {
-    private String appName;
+
+    private String appname;
 
     private String master;
 
@@ -18,18 +19,11 @@ public class SparkProperties {
 
     private StreamingProperties streaming = new StreamingProperties();
 
+    @Getter
+    @Setter
     @ConfigurationProperties("streaming")
     public static class StreamingProperties {
-
         private Integer duration;
-
-        public Integer getDuration() {
-            return duration;
-        }
-
-        public void setDuration(Integer duration) {
-            this.duration = duration;
-        }
-
     }
+
 }
