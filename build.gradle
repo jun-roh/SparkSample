@@ -63,8 +63,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // Spark
-    implementation 'org.codehaus.janino:commons-compiler:3.1.4'
-    implementation 'org.codehaus.janino:janino:3.1.4'
+    implementation 'org.codehaus.janino:commons-compiler:3.0.8'
+    implementation 'org.codehaus.janino:janino:3.0.8'
 
     implementation("org.apache.spark:spark-core_2.12:3.1.1"){
         exclude group: "org.apache.xbean", module:"xbean-asm6-shaded"
