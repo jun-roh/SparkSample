@@ -28,14 +28,20 @@ public class MainController {
 
     @GetMapping("/")
     public String index(Model model){
-        // json to spark dataframe
+        // json to spark dataframe multiline
         Dataset<Row> df =  sparkSession.read().format("json")
                 .option("multiline", true)
-                .load("src/main/resources/data.json");
+                .load("src/main/resources/data_line/json_data_line.json");
         df.show(5, 150);
         df.printSchema();
 
-        //
+        // json to spark dataframe single line
+        Dataset<Row> df_single =  sparkSession.read().format("json")
+                .load("src/main/resources/data_line/json_data_single.json");
+        df_single.show(5, 150);
+        df_single = df_single.filter(df_single.col("owns").isNotNull());
+        df_single.show(5, 150);
+
         return "index";
     }
 }
