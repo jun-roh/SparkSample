@@ -1,7 +1,7 @@
 package com.test.spark.controller;
 
-import com.google.cloud.bigquery.BigQuery;
-import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.*;
+import com.test.spark.config.Bigquery.BigqueryConfig;
 import com.test.spark.util.JsonUtil;
 import com.test.spark.util.RedisUtil;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/")
@@ -28,23 +30,16 @@ public class MainController {
     private SparkSession sparkSession;
     private JavaStreamingContext streamingContext;
     private RedisUtil redisUtil;
+    private BigqueryConfig bigqueryConfig;
 
     public MainController(JavaSparkContext sparkContext, SparkSession sparkSession, JavaStreamingContext streamingContext,
-                          RedisUtil redisUtil){
+                          RedisUtil redisUtil, BigqueryConfig bigqueryConfig){
         this.sparkContext = sparkContext;
         this.sparkSession = sparkSession;
         this.streamingContext = streamingContext;
         this.redisUtil = redisUtil;
+        this.bigqueryConfig = bigqueryConfig;
     }
-
-//    @Autowired
-//    private JavaSparkContext sparkContext;
-//
-//    @Autowired
-//    private SparkSession sparkSession;
-//
-//    @Autowired
-//    private JavaStreamingContext streamingContext;
 
     @GetMapping("/")
     public String index(Model model){
@@ -73,9 +68,6 @@ public class MainController {
         // List 로 row 마다 json string 으로 변경
         List<String> json_result = JsonUtil.convertListToJsonStringList(result);
 
-//        JSONArray jsonArray = JsonUtil.convertListToJson(result);
-//        String jsonString = jsonArray.toString();
-
         // Redis 저장
         redisUtil.setValue("json_data", json_result);
 
@@ -96,23 +88,94 @@ public class MainController {
         List<HashMap<String, Object>> result = setHashMapData();
         JSONArray jsonArray = JsonUtil.convertListToJson(result);
         String jsonString = jsonArray.toString();
+        String path = "src/main/resources/json_file.json";
+        try {
+            // json array file 쓰기
+            File file = new File(path);
+            if (!file.exists())
+                file.createNewFile();
 
-//        redisUtil.setValue("json_data", json_result);
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
 
-        List<String> get_json_string = redisUtil.getMapValue("json_data");
+            writer.write(jsonArray.toString());
+            writer.flush();
+            writer.close();
 
+            // json file 을 dataset spark 이용
+            Dataset<Row> df =  sparkSession.read().format("json")
+                    .option("multiline", true)
+                    .load(path);
+            df.show();
 
-//        Dataset<String> df = sparkSession.createDataset(get_json_string, Encoders.STRING());
-//        Dataset<Row> df1 = sparkSession.read().json(df);
-//        df1.show();
+            if (file.exists())
+                if (file.delete())
+                    System.out.println("file 삭제");
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
         return "index";
     }
 
     @GetMapping("/bigquery_spark")
     public String bigQuerySpark(Model model){
-        BigQuery bigQuery = BigQueryOptions.getDefaultInstance().getService();
-        System.out.println(bigQuery.toString());
+        try {
+            BigQuery bigQuery = bigqueryConfig.setBigquery();
+
+            // for 문으로 돌려서 !!
+            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder("select * from de_test.test_table").setJobTimeoutMs(60000L).setUseLegacySql(false).build();
+
+            JobId jobId = JobId.of(UUID.randomUUID().toString());
+            Job queryJob = bigQuery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
+            queryJob = queryJob.waitFor();
+            if (queryJob == null) {
+                throw new RuntimeException("Job no longer exists");
+            } else if (queryJob.getStatus().getError() != null) {
+                throw new RuntimeException(queryJob.getStatus().getError().toString());
+            }
+            TableResult result = queryJob.getQueryResults();
+
+            List<String> fieldList = result.getSchema().getFields().stream()
+                    .map(Field::getName)
+                    .collect(Collectors.toList());
+
+            JSONArray jsonArray = JsonUtil.convertTableResultToJson(result, fieldList);
+
+            String path = "src/main/resources/json_file.json";
+            try {
+                // json array file 쓰기
+                File file = new File(path);
+                if (!file.exists())
+                    file.createNewFile();
+
+                BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
+
+                writer.write(jsonArray.toString());
+                writer.flush();
+                writer.close();
+
+                // json file 을 dataset spark 이용
+                Dataset<Row> df =  sparkSession.read().format("json")
+                        .option("multiline", true)
+                        .load(path);
+                df.show();
+
+                df.createOrReplaceTempView("test");
+
+                List<String> df_string = sparkSession.sql("select idx, name, value from test where idx >= 5").toJSON().collectAsList();
+
+                if (file.exists())
+                    if (file.delete())
+                        System.out.println("file 삭제");
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+        } catch (Exception e){
+            System.out.println(e.getMessage());
+            System.out.println(Arrays.toString(e.getStackTrace()));
+        }
+
+
         return "index";
     }
 
