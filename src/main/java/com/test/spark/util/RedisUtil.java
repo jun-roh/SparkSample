@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class RedisUtil {
@@ -24,9 +25,10 @@ public class RedisUtil {
         return (List<String>) redisTemplate.opsForValue().get(key);
     }
 
-    public void setValue(String key, Object data) {
+    public void setValue(String key, Object data, int expire, TimeUnit timeUnit) {
         redisTemplate.delete(key);
         redisTemplate.opsForValue().set(key, data);
+        redisTemplate.expire(key, expire, timeUnit);
     }
 
     public void removeValue(String key) {
