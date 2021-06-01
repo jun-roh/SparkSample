@@ -14,6 +14,8 @@ public class FileUtil {
     public void setFile(String path, Object object){
         try {
             // json array file 쓰기
+            long file_before_time = System.currentTimeMillis();
+            System.out.println("#### file Start Time : " + file_before_time + "####");
             File file = new File(path);
             if (!file.exists()){
                 file.createNewFile();
@@ -24,6 +26,10 @@ public class FileUtil {
             writer.write(object.toString());
             writer.flush();
             writer.close();
+            long file_after_time = System.currentTimeMillis();
+            long file_diff_time = (file_after_time - file_before_time) / 1000;
+            System.out.println("#### file End Time : " + file_after_time + "####");
+            System.out.println("#### file Diff Time : " + file_diff_time + "####");
         } catch (Exception e){
             e.printStackTrace();
         }

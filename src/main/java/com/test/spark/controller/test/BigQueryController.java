@@ -46,14 +46,16 @@ public class BigQueryController {
     public String bigQuerySpark(Model model){
         String key = "json_file";
         String path = "src/main/resources/temp/"+key+".json";
-        String query = "select * from de_test.test_table";
+        String query = TestQuery.query_2;
 
         try {
             // redis key 존재하지 않으면 Bigquery 에서 데이터 가져와서 json 에 넣도록 함
             if (redisUtil.getValue(key) == null){
-                BigQuery bigQuery = bigqueryConfig.setBigquery();
+                long bigquery_before_time = System.currentTimeMillis();
+                System.out.println("#### bigquery Start Time : " + bigquery_before_time + "####");
 
                 // Bigquery Query 처리
+                BigQuery bigQuery = bigqueryConfig.setBigquery();
                 QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query)
                         .setJobTimeoutMs(60000L).setUseLegacySql(false).build();
 
@@ -70,32 +72,54 @@ public class BigQueryController {
 
                 TableResult result = queryJob.getQueryResults();
 
+                long bigquery_after_time = System.currentTimeMillis();
+                long bigquery_diff_time = (bigquery_after_time - bigquery_before_time) / 1000;
+                System.out.println("#### bigquery End Time : " + bigquery_after_time + "####");
+                System.out.println("#### bigquery Diff Time : " + bigquery_diff_time + "####");
+
                 // Bigquery result -> json
+                long json_before_time = System.currentTimeMillis();
+                System.out.println("#### json Start Time : " + json_before_time + "####");
                 List<String> fieldList = result.getSchema().getFields().stream()
                         .map(Field::getName)
                         .collect(Collectors.toList());
                 JSONArray jsonArray = JsonUtil.convertTableResultToJson(result, fieldList);
+                long json_after_time = System.currentTimeMillis();
+                long json_diff_time = (json_after_time - json_before_time) / 1000;
+                System.out.println("#### json End Time : " + json_after_time + "####");
+                System.out.println("#### json Diff Time : " + json_diff_time + "####");
 
                 // file 생성
                 fileUtil.setFile(path, jsonArray);
                 // redis 생성 (생명주기 부여)
-                redisUtil.setValue(key, path, 100, TimeUnit.SECONDS);
+                redisUtil.setValue(key, path, 1, TimeUnit.MINUTES);
             }
 
+            long spark_before_time = System.currentTimeMillis();
+            System.out.println("#### spark Start Time : " + spark_before_time + "####");
             // json 형태 데이터 -> spark dataset 변형
             Dataset<Row> df =  sparkSession.read().format("json")
                     .option("multiline", true)
                     .load(path);
             df.show();
+            System.out.println("count : " + df.count());
 
             // dataset -> view 생성
             df.createOrReplaceTempView(key);
-
+            long spark_after_time = System.currentTimeMillis();
+            long spark_diff_time = (spark_after_time - spark_before_time) / 1000;
+            System.out.println("#### spark End Time : " + spark_after_time + "####");
+            System.out.println("#### spark Diff Time : " + spark_diff_time + "####");
             // view 에 원하는 쿼리를 통해서 spark 연산
-            List<String> df_string = sparkSession.sql("select idx, name, value from "+key+" where idx >= 5")
+            long spark_qry_before_time = System.currentTimeMillis();
+            System.out.println("#### spark_qry Start Time : " + spark_qry_before_time + "####");
+            List<String> df_string = sparkSession.sql("select _i_t, pt, max_story from "+key+" ")
                     .toJSON().collectAsList();
 
-            System.out.println(df_string);
+            long spark_qry_after_time = System.currentTimeMillis();
+            long spark_qry_diff_time = (spark_qry_after_time - spark_qry_before_time) / 1000;
+            System.out.println("#### spark End Time : " + spark_qry_after_time + "####");
+            System.out.println("#### spark Diff Time : " + spark_qry_diff_time + "####");
         } catch (Exception e){
             System.out.println("-----");
             System.out.println(e.getMessage());

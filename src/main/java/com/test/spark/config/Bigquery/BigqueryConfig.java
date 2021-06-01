@@ -17,13 +17,9 @@ public class BigqueryConfig {
         String json_path = System.getProperty("user.dir") + "/src/main/resources/bigquery/test_credential.json";
         String project = "lgpublic";
         try {
-            System.out.println(1);
             FileInputStream fileInputStream = new FileInputStream(json_path);
-            System.out.println(2);
             GoogleCredentials googleCredentials = ServiceAccountCredentials.fromStream(fileInputStream);
-            System.out.println(3);
             bigQuery = BigQueryOptions.newBuilder().setCredentials(googleCredentials).setProjectId(project).build().getService();
-            System.out.println(4);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

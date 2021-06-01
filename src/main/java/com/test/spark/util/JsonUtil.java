@@ -27,7 +27,7 @@ public class JsonUtil {
             final JSONObject jsonObject = new JSONObject();
             fields.forEach(field -> {
                 try {
-                    jsonObject.put(field, row.get(field).getStringValue());
+                    jsonObject.put(field, row.get(field).isNull()? null : row.get(field).getStringValue());
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }

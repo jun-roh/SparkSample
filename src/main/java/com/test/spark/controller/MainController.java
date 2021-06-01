@@ -58,7 +58,6 @@ public class MainController {
         df_single = df_single.filter(df_single.col("owns").isNotNull());
         df_single.show(5, 150);
 
-
         return "index";
     }
 }
