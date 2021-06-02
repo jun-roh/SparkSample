@@ -3,6 +3,7 @@ package com.test.spark.util;
 import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.TableResult;
+import org.apache.tomcat.util.json.JSONParser;
 import org.springframework.boot.configurationprocessor.json.JSONArray;
 import org.springframework.boot.configurationprocessor.json.JSONException;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
@@ -33,6 +34,23 @@ public class JsonUtil {
                 }
             });
             jsonArray.put(jsonObject);
+        }
+        return jsonArray;
+    }
+
+    public static JSONArray convertJsonTableResultToJson(TableResult tableResult, List<String> fields){
+        JSONArray jsonArray = new JSONArray();
+        for (FieldValueList row: tableResult.iterateAll()){
+            final JSONObject jsonObject = new JSONObject();
+            fields.forEach(field -> {
+                try {
+                    String st = row.get(field).getStringValue();
+                    JSONObject jo = new JSONObject(st);
+                    jsonArray.put(jo);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            });
         }
         return jsonArray;
     }
