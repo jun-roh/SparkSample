@@ -2,7 +2,11 @@ package com.test.spark.controller.test;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.bigquery.*;
-import com.test.spark.config.Bigquery.BigqueryConfig;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
+import com.test.spark.config.GCP.GCPConfig;
 import com.test.spark.util.FileUtil;
 import com.test.spark.util.JsonUtil;
 import com.test.spark.util.RedisUtil;
@@ -17,6 +21,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -30,24 +35,24 @@ public class BigQueryController {
     private SparkSession sparkSession;
     private JavaStreamingContext streamingContext;
     private RedisUtil redisUtil;
-    private BigqueryConfig bigqueryConfig;
+    private GCPConfig GCPConfig;
     private FileUtil fileUtil;
 
     public BigQueryController(JavaSparkContext sparkContext, SparkSession sparkSession, JavaStreamingContext streamingContext,
-                          RedisUtil redisUtil, FileUtil fileUtil, BigqueryConfig bigqueryConfig){
+                              RedisUtil redisUtil, FileUtil fileUtil, GCPConfig GCPConfig){
         this.sparkContext = sparkContext;
         this.sparkSession = sparkSession;
         this.streamingContext = streamingContext;
         this.redisUtil = redisUtil;
         this.fileUtil = fileUtil;
-        this.bigqueryConfig = bigqueryConfig;
+        this.GCPConfig = GCPConfig;
     }
 
     @GetMapping("/bigquery_spark")
     public String bigQuerySpark(Model model){
         String key = "json_file";
         String path = "src/main/resources/temp/"+key+".json";
-        String query = TestQuery.query_2;
+        String query = TestQuery.query_1;
 
         try {
             // redis key 존재하지 않으면 Bigquery 에서 데이터 가져와서 json 에 넣도록 함
@@ -56,7 +61,7 @@ public class BigQueryController {
                 System.out.println("#### bigquery Start Time : " + bigquery_before_time + "####");
 
                 // Bigquery Query 처리
-                BigQuery bigQuery = bigqueryConfig.setBigquery();
+                BigQuery bigQuery = GCPConfig.setBigquery();
                 QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query)
                         .setJobTimeoutMs(60000L).setUseLegacySql(false).build();
 
@@ -142,7 +147,7 @@ public class BigQueryController {
                 System.out.println("#### bigquery Start Time : " + bigquery_before_time + "####");
 
                 // Bigquery Query 처리
-                BigQuery bigQuery = bigqueryConfig.setBigquery();
+                BigQuery bigQuery = GCPConfig.setBigquery();
                 QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query)
                         .setJobTimeoutMs(60000L).setUseLegacySql(false).build();
 
@@ -204,6 +209,8 @@ public class BigQueryController {
             List<String> df_string = sparkSession.sql("select _i_t, pt, max_story from "+key+" ")
                     .toJSON().collectAsList();
 
+            df.unpersist();
+
             long spark_qry_after_time = System.currentTimeMillis();
             long spark_qry_diff_time = (spark_qry_after_time - spark_qry_before_time) / 1000;
             System.out.println("#### spark End Time : " + spark_qry_after_time + "####");
@@ -221,32 +228,59 @@ public class BigQueryController {
     public String bigQueryStorage(Model model){
 
         String query = TestQuery.query_2;
-        String sourceUri = "gs://spark-samples-data/sample/test.json";
+        String sourceUri = "gs://spark-samples-data/sample/test_*.json";
         String dataFormat = "JSON";
+        String key = "test";
+        String sparkPath = "src/main/resources/temp/"+key+"_*.json";
+        String storagePath = "sample/test_000000000000.json";
+        String filePath = "src/main/resources/temp/"+key+"_000000000000.json";
+
         try {
             long bigquery_before_time = System.currentTimeMillis();
             System.out.println("#### bigquery Start Time : " + bigquery_before_time + "####");
-            BigQuery bigQuery = bigqueryConfig.setBigquery();
+            BigQuery bigQuery = GCPConfig.setBigquery();
             String qry =
                     String.format(
                             "EXPORT DATA OPTIONS(uri='%s', format='%s', overwrite=true) "
-                                    + "AS " + query,
-                            sourceUri, dataFormat);
+                                    + "AS \n %s",
+                            sourceUri, dataFormat, query);
 
             TableResult results = bigQuery.query(QueryJobConfiguration.of(qry));
-            System.out.println(results.getSchema().getFields().toString());
             long bigquery_after_time = System.currentTimeMillis();
             long bigquery_diff_time = (bigquery_after_time - bigquery_before_time) / 1000;
             System.out.println("#### bigquery End Time : " + bigquery_after_time + "####");
             System.out.println("#### bigquery Diff Time : " + bigquery_diff_time + "####");
 
-//            // Sample
-//            // json to spark dataframe multiline
-//            Dataset<Row> df =  sparkSession.read().format("json")
-//                    .load("src/main/resources/data_line/json_data_line.json");
-//            df.show(5, 150);
-//            df.printSchema();
+            long download_before_time = System.currentTimeMillis();
+            System.out.println("#### download Start Time : " + download_before_time + "####");
+            GoogleCredentials googleCredentials = GCPConfig.accessToken();
+            Storage storage = StorageOptions.newBuilder().setCredentials(googleCredentials).build().getService();
 
+            Blob blob = storage.get(BlobId.of("spark-samples-data", storagePath));
+            blob.downloadTo(Paths.get(filePath));
+
+            long download_after_time = System.currentTimeMillis();
+            long download_diff_time = (download_after_time - download_before_time) / 1000;
+            System.out.println("#### bigquery End Time : " + download_after_time + "####");
+            System.out.println("#### bigquery Diff Time : " + download_diff_time + "####");
+
+
+            long spark_before_time = System.currentTimeMillis();
+            System.out.println("#### spark Start Time : " + spark_before_time + "####");
+            // json 형태 데이터 -> spark dataset 변형
+            Dataset<Row> df =  sparkSession.read().format("json")
+                    .option("multiline", false)
+                    .load(sparkPath);
+            df.show();
+            System.out.println("count : " + df.count());
+
+            // dataset -> view 생성
+            df.createOrReplaceTempView(key);
+            long spark_after_time = System.currentTimeMillis();
+            long spark_diff_time = (spark_after_time - spark_before_time) / 1000;
+            System.out.println("#### spark End Time : " + spark_after_time + "####");
+            System.out.println("#### spark Diff Time : " + spark_diff_time + "####");
+            df.unpersist();
         } catch (Exception e){
             System.out.println(e.getMessage());
             System.out.println(Arrays.toString(e.getStackTrace()));

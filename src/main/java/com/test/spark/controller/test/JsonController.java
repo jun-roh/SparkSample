@@ -1,6 +1,6 @@
 package com.test.spark.controller.test;
 
-import com.test.spark.config.Bigquery.BigqueryConfig;
+import com.test.spark.config.GCP.GCPConfig;
 import com.test.spark.data.SimpleData;
 import com.test.spark.util.JsonUtil;
 import com.test.spark.util.RedisUtil;
@@ -30,15 +30,15 @@ public class JsonController {
     private SparkSession sparkSession;
     private JavaStreamingContext streamingContext;
     private RedisUtil redisUtil;
-    private BigqueryConfig bigqueryConfig;
+    private GCPConfig GCPConfig;
 
     public JsonController(JavaSparkContext sparkContext, SparkSession sparkSession, JavaStreamingContext streamingContext,
-                              RedisUtil redisUtil, BigqueryConfig bigqueryConfig){
+                          RedisUtil redisUtil, GCPConfig GCPConfig){
         this.sparkContext = sparkContext;
         this.sparkSession = sparkSession;
         this.streamingContext = streamingContext;
         this.redisUtil = redisUtil;
-        this.bigqueryConfig = bigqueryConfig;
+        this.GCPConfig = GCPConfig;
     }
 
     @GetMapping("/json_spark")

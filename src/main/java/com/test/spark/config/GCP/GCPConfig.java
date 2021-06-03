@@ -1,4 +1,4 @@
-package com.test.spark.config.Bigquery;
+package com.test.spark.config.GCP;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
@@ -14,7 +14,7 @@ import java.io.FileInputStream;
 import java.nio.file.Paths;
 
 @Configuration
-public class BigqueryConfig {
+public class GCPConfig {
     @Bean
     public synchronized BigQuery setBigquery(){
         BigQuery bigQuery = null;
@@ -40,9 +40,7 @@ public class BigqueryConfig {
         } catch (Exception e){
             e.printStackTrace();
         }
-        Storage storage = StorageOptions.newBuilder().setCredentials(googleCredentials).build().getService();
-        Blob blob = storage.get("", "");
-        blob.downloadTo(Paths.get(""));
+
         return googleCredentials;
     }
 }

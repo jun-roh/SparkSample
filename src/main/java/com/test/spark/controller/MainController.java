@@ -1,27 +1,16 @@
 package com.test.spark.controller;
 
-import com.google.cloud.bigquery.*;
-import com.test.spark.config.Bigquery.BigqueryConfig;
-import com.test.spark.util.JsonUtil;
+import com.test.spark.config.GCP.GCPConfig;
 import com.test.spark.util.RedisUtil;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.springframework.boot.configurationprocessor.json.JSONArray;
-import org.springframework.boot.configurationprocessor.json.JSONException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/")
@@ -30,15 +19,15 @@ public class MainController {
     private SparkSession sparkSession;
     private JavaStreamingContext streamingContext;
     private RedisUtil redisUtil;
-    private BigqueryConfig bigqueryConfig;
+    private GCPConfig GCPConfig;
 
     public MainController(JavaSparkContext sparkContext, SparkSession sparkSession, JavaStreamingContext streamingContext,
-                          RedisUtil redisUtil, BigqueryConfig bigqueryConfig){
+                          RedisUtil redisUtil, GCPConfig GCPConfig){
         this.sparkContext = sparkContext;
         this.sparkSession = sparkSession;
         this.streamingContext = streamingContext;
         this.redisUtil = redisUtil;
-        this.bigqueryConfig = bigqueryConfig;
+        this.GCPConfig = GCPConfig;
     }
 
     @GetMapping("/")
