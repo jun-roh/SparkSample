@@ -1,5 +1,6 @@
 package com.test.spark.controller.test;
 
+import com.google.api.services.bigquery.model.JobStatistics2;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.bigquery.*;
 import com.google.cloud.storage.Blob;
@@ -245,7 +246,49 @@ public class BigQueryController {
                                     + "AS \n %s",
                             sourceUri, dataFormat, query);
 
+            String jsonQuery = "SELECT TO_JSON_STRING(t) FROM ( \n" + query.replaceAll(";", "") + "\n ) AS t;";
+
+            QueryJobConfiguration queryConfig =
+                    QueryJobConfiguration.newBuilder(query).setDryRun(true).setUseQueryCache(false).build();
+
+            Job queryJob = bigQuery.create(JobInfo.of(queryConfig));
+//
+//            JobId jobId = JobId.of(UUID.randomUUID().toString());
+//
+//            Job queryJob = bigQuery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
+            // 비용이 들지 않음!
+            JobStatistics.QueryStatistics statistics = queryJob.getStatistics();
+            JobStatistics2 jobStatistics2 = new JobStatistics2();
+            jobStatistics2.setTotalBytesProcessed(statistics.getTotalBytesProcessed());
+                        System.out.println("------------------");
+            System.out.println(jobStatistics2.getTotalBytesProcessed());
+            System.out.println(jobStatistics2.getTotalBytesProcessedAccuracy());
+//            System.out.println("------------------");
+//            // Query 결과 Schema 만 가져올 수 있음
+//            System.out.println(statistics.getSchema());
+//            FieldList fl = statistics.getSchema().getFields();
+//            for (Field field : fl){
+//                System.out.println("-------------------");
+//                System.out.println(field.getName());
+//                System.out.println(field.getType().name());
+//            }
+//            // Query 결과에 대한 총 용량
+//            System.out.println("getEstimatedBytesProcessed BytesProcess: " + statistics.getEstimatedBytesProcessed());
+//            System.out.println("getTotalBytesBilled BytesProcess: " + statistics.getTotalBytesBilled());
+//            System.out.println("getTotalBytesProcessed BytesProcess: " + statistics.getTotalBytesProcessed());
+//            System.out.println("getNumDmlAffectedRows BytesProcess: " + statistics.getNumDmlAffectedRows());
+
+//            queryJob = queryJob.waitFor();
+//
+//            if (queryJob == null) {
+//                throw new RuntimeException("Job no longer exists");
+//            } else if (queryJob.getStatus().getError() != null) {
+//                throw new RuntimeException(queryJob.getStatus().getError().toString());
+//            }
+
             TableResult results = bigQuery.query(QueryJobConfiguration.of(qry));
+            System.out.println(results);
+
             long bigquery_after_time = System.currentTimeMillis();
             long bigquery_diff_time = (bigquery_after_time - bigquery_before_time) / 1000;
             System.out.println("#### bigquery End Time : " + bigquery_after_time + "####");
