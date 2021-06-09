@@ -228,7 +228,7 @@ public class BigQueryController {
     @GetMapping("/bigquery_storage")
     public String bigQueryStorage(Model model){
 
-        String query = TestQuery.query_2;
+        String query = TestQuery.query_4;
         String sourceUri = "gs://spark-samples-data/sample/test_*.json";
         String dataFormat = "JSON";
         String key = "test";
@@ -258,11 +258,13 @@ public class BigQueryController {
 //            Job queryJob = bigQuery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
             // 비용이 들지 않음!
             JobStatistics.QueryStatistics statistics = queryJob.getStatistics();
-            JobStatistics2 jobStatistics2 = new JobStatistics2();
-            jobStatistics2.setTotalBytesProcessed(statistics.getTotalBytesProcessed());
-                        System.out.println("------------------");
-            System.out.println(jobStatistics2.getTotalBytesProcessed());
-            System.out.println(jobStatistics2.getTotalBytesProcessedAccuracy());
+            System.out.println("getEstimatedBytesProcessed :"+statistics.getEstimatedBytesProcessed());
+            System.out.println("getTotalBytesProcessed :"+statistics.getTotalBytesProcessed());
+            System.out.println("getBillingTier :"+statistics.getBillingTier());
+            System.out.println("getNumDmlAffectedRows :"+statistics.getNumDmlAffectedRows());
+            System.out.println("getTotalBytesBilled :"+statistics.getTotalBytesBilled());
+            System.out.println("getTotalPartitionsProcessed :"+statistics.getTotalPartitionsProcessed());
+            System.out.println("getDdlOperationPerformed :"+statistics.getDdlOperationPerformed());
 //            System.out.println("------------------");
 //            // Query 결과 Schema 만 가져올 수 있음
 //            System.out.println(statistics.getSchema());
@@ -300,7 +302,9 @@ public class BigQueryController {
             Storage storage = StorageOptions.newBuilder().setCredentials(googleCredentials).build().getService();
 
             Blob blob = storage.get(BlobId.of("spark-samples-data", storagePath));
+            System.out.println(blob.getSize());
             blob.downloadTo(Paths.get(filePath));
+            storage.delete(BlobId.of("spark-samples-data", storagePath));
 
             long download_after_time = System.currentTimeMillis();
             long download_diff_time = (download_after_time - download_before_time) / 1000;
