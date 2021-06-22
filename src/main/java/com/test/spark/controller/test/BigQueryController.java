@@ -228,58 +228,24 @@ public class BigQueryController {
     @GetMapping("/bigquery_storage")
     public String bigQueryStorage(Model model){
 
-        String query = TestQuery.query_4;
-        String sourceUri = "gs://spark-samples-data/sample/test_*.json";
+        String query = TestQuery.query_5;
+        String sourceUri = "gs://spark-samples-data/sample/test.json";
         String dataFormat = "JSON";
         String key = "test";
         String sparkPath = "src/main/resources/temp/"+key+"_*.json";
-        String storagePath = "sample/test_000000000000.json";
+        String storagePath = "sample/test_*.json";
         String filePath = "src/main/resources/temp/"+key+"_000000000000.json";
 
         try {
             long bigquery_before_time = System.currentTimeMillis();
             System.out.println("#### bigquery Start Time : " + bigquery_before_time + "####");
             BigQuery bigQuery = GCPConfig.setBigquery();
-            String qry =
-                    String.format(
-                            "EXPORT DATA OPTIONS(uri='%s', format='%s', overwrite=true) "
-                                    + "AS \n %s",
-                            sourceUri, dataFormat, query);
-
-            String jsonQuery = "SELECT TO_JSON_STRING(t) FROM ( \n" + query.replaceAll(";", "") + "\n ) AS t;";
-
-            QueryJobConfiguration queryConfig =
-                    QueryJobConfiguration.newBuilder(query).setDryRun(true).setUseQueryCache(false).build();
-
-            Job queryJob = bigQuery.create(JobInfo.of(queryConfig));
+//            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(query)
+//                    .setJobTimeoutMs(60000L).setUseLegacySql(false).build();
 //
 //            JobId jobId = JobId.of(UUID.randomUUID().toString());
-//
 //            Job queryJob = bigQuery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
-            // 비용이 들지 않음!
-            JobStatistics.QueryStatistics statistics = queryJob.getStatistics();
-            System.out.println("getEstimatedBytesProcessed :"+statistics.getEstimatedBytesProcessed());
-            System.out.println("getTotalBytesProcessed :"+statistics.getTotalBytesProcessed());
-            System.out.println("getBillingTier :"+statistics.getBillingTier());
-            System.out.println("getNumDmlAffectedRows :"+statistics.getNumDmlAffectedRows());
-            System.out.println("getTotalBytesBilled :"+statistics.getTotalBytesBilled());
-            System.out.println("getTotalPartitionsProcessed :"+statistics.getTotalPartitionsProcessed());
-            System.out.println("getDdlOperationPerformed :"+statistics.getDdlOperationPerformed());
-//            System.out.println("------------------");
-//            // Query 결과 Schema 만 가져올 수 있음
-//            System.out.println(statistics.getSchema());
-//            FieldList fl = statistics.getSchema().getFields();
-//            for (Field field : fl){
-//                System.out.println("-------------------");
-//                System.out.println(field.getName());
-//                System.out.println(field.getType().name());
-//            }
-//            // Query 결과에 대한 총 용량
-//            System.out.println("getEstimatedBytesProcessed BytesProcess: " + statistics.getEstimatedBytesProcessed());
-//            System.out.println("getTotalBytesBilled BytesProcess: " + statistics.getTotalBytesBilled());
-//            System.out.println("getTotalBytesProcessed BytesProcess: " + statistics.getTotalBytesProcessed());
-//            System.out.println("getNumDmlAffectedRows BytesProcess: " + statistics.getNumDmlAffectedRows());
-
+//
 //            queryJob = queryJob.waitFor();
 //
 //            if (queryJob == null) {
@@ -287,9 +253,38 @@ public class BigQueryController {
 //            } else if (queryJob.getStatus().getError() != null) {
 //                throw new RuntimeException(queryJob.getStatus().getError().toString());
 //            }
+//
+//            TableResult result = queryJob.getQueryResults();
+//            System.out.println(result);
+            String qry =
+                    String.format(
+                            "EXPORT DATA OPTIONS(uri='%s', format='%s', overwrite=true) "
+                                    + "AS \n %s",
+                            sourceUri, dataFormat, query);
 
-            TableResult results = bigQuery.query(QueryJobConfiguration.of(qry));
-            System.out.println(results);
+//            String jsonQuery = "SELECT TO_JSON_STRING(t) FROM ( \n" + query.replaceAll(";", "") + "\n ) AS t;";
+            QueryJobConfiguration queryConfig = QueryJobConfiguration.newBuilder(qry)
+                    .setJobTimeoutMs(60000L).setUseLegacySql(false).build();
+//            QueryJobConfiguration queryConfig =
+//                    QueryJobConfiguration.newBuilder(query).setDryRun(true).setUseQueryCache(false).build();
+//
+//            Job queryJob = bigQuery.create(JobInfo.of(queryConfig));
+//
+            JobId jobId = JobId.of(UUID.randomUUID().toString());
+//
+            Job queryJob = bigQuery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
+            // 비용이 들지 않음!
+            JobStatistics.QueryStatistics statistics = queryJob.getStatistics();
+            System.out.println("getEstimatedBytesProcessed :"+statistics.getEstimatedBytesProcessed());
+            System.out.println("getTotalBytesProcessed :"+statistics.getTotalBytesProcessed());
+            System.out.println("------------------");
+            // Query 결과 Schema 만 가져올 수 있음
+            // Query 결과에 대한 총 용량
+            System.out.println("getEstimatedBytesProcessed BytesProcess: " + statistics.getEstimatedBytesProcessed());
+            System.out.println("getTotalBytesBilled BytesProcess: " + statistics.getTotalBytesBilled());
+            System.out.println("getTotalBytesProcessed BytesProcess: " + statistics.getTotalBytesProcessed());
+            System.out.println("getNumDmlAffectedRows BytesProcess: " + statistics.getNumDmlAffectedRows());
+
 
             long bigquery_after_time = System.currentTimeMillis();
             long bigquery_diff_time = (bigquery_after_time - bigquery_before_time) / 1000;
@@ -304,30 +299,30 @@ public class BigQueryController {
             Blob blob = storage.get(BlobId.of("spark-samples-data", storagePath));
             System.out.println(blob.getSize());
             blob.downloadTo(Paths.get(filePath));
-            storage.delete(BlobId.of("spark-samples-data", storagePath));
+//            storage.delete(BlobId.of("spark-samples-data", storagePath));
 
             long download_after_time = System.currentTimeMillis();
             long download_diff_time = (download_after_time - download_before_time) / 1000;
             System.out.println("#### bigquery End Time : " + download_after_time + "####");
             System.out.println("#### bigquery Diff Time : " + download_diff_time + "####");
-
-
-            long spark_before_time = System.currentTimeMillis();
-            System.out.println("#### spark Start Time : " + spark_before_time + "####");
-            // json 형태 데이터 -> spark dataset 변형
-            Dataset<Row> df =  sparkSession.read().format("json")
-                    .option("multiline", false)
-                    .load(sparkPath);
-            df.show();
-            System.out.println("count : " + df.count());
-
-            // dataset -> view 생성
-            df.createOrReplaceTempView(key);
-            long spark_after_time = System.currentTimeMillis();
-            long spark_diff_time = (spark_after_time - spark_before_time) / 1000;
-            System.out.println("#### spark End Time : " + spark_after_time + "####");
-            System.out.println("#### spark Diff Time : " + spark_diff_time + "####");
-            df.unpersist();
+//
+//            long limit_byte = 107374127424L;
+//            long spark_before_time = System.currentTimeMillis();
+//            System.out.println("#### spark Start Time : " + spark_before_time + "####");
+//            // json 형태 데이터 -> spark dataset 변형
+//            Dataset<Row> df =  sparkSession.read().format("json")
+//                    .option("multiline", false)
+//                    .load(sparkPath);
+//            df.show();
+//            System.out.println("count : " + df.count());
+//
+//            // dataset -> view 생성
+//            df.createOrReplaceTempView(key);
+//            long spark_after_time = System.currentTimeMillis();
+//            long spark_diff_time = (spark_after_time - spark_before_time) / 1000;
+//            System.out.println("#### spark End Time : " + spark_after_time + "####");
+//            System.out.println("#### spark Diff Time : " + spark_diff_time + "####");
+//            df.unpersist();
         } catch (Exception e){
             System.out.println(e.getMessage());
             System.out.println(Arrays.toString(e.getStackTrace()));
